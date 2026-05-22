@@ -1,6 +1,6 @@
 # US Tidemaps
 
-Standalone Pebble app showing NOAA tide predictions for a user-configured station. Designed for the Pebble Time 2 (emery).
+Open-source Pebble app showing NOAA tide predictions for a user-configured station. Designed for the Pebble Time 2 (emery).
 
 48-hour hourly window centered on "now" (24 past, 24 future). UP / DOWN scroll the rendered window by one hour. SELECT toggles between 24h and 48h views. BACK exits.
 
@@ -16,10 +16,14 @@ pebble install --emulator emery
 
 Set a NOAA tide station ID via the Pebble app's settings page. Find your station's 7-digit ID at https://tidesandcurrents.noaa.gov/.
 
-## Visual consistency with JY Time
+## Data source
 
-This app is a sibling project to the JY Time watchface (https://github.com/jashyotes/simple-pixel-style). Visual changes to fonts, icons, or layout patterns should be mirrored across both projects where applicable so they read as the same family in a Pebble menu.
+NOAA Tides & Currents API (https://api.tidesandcurrents.noaa.gov/). Free, no API key required. US stations only.
+
+## Visual sibling
+
+This app shares a visual lineage with the JY Time watchface. The launcher icons are intentionally matched in weight and frame so the two read as a family in the Pebble menu. Visual changes to fonts, icons, or layout patterns should be mirrored across both projects where applicable.
 
 ## License
 
-Private.
+MIT. See [LICENSE](LICENSE).
