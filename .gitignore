@@ -1,0 +1,16 @@
+# OS/editor noise
+.DS_Store
+*.swp
+*.swo
+
+# Pebble build outputs and dependencies
+build/
+node_modules/
+.lock-waf*
+.waf*
+
+# Packaged binaries are generated artifacts; keep source and release notes tracked.
+*.pbw
+
+# Logs
+*.log
