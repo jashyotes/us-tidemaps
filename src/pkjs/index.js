@@ -321,13 +321,10 @@ Pebble.addEventListener('showConfiguration', function() {
 
 Pebble.addEventListener('webviewclosed', function(e) {
   if (!e || !e.response) return;
-  var messageKeys = clay.getSettings(e.response, false);
-  var settings = {};
-  Object.keys(messageKeys).forEach(function(k) {
-    settings[k] = messageKeys[k];
-  });
-  // Persist with the same key Clay reads back from on next launch.
-  localStorage.setItem('clay-settings', JSON.stringify(settings));
+  // Clay.getSettings() writes the flattened values to localStorage itself.
+  // Don't re-write the raw {value, precision} wrappers on top — that's what
+  // produced "[object Object]" station IDs in 0.1.0.
+  clay.getSettings(e.response, false);
   sendStationConfig();
   refreshTides();
   scheduleRefresh();
