@@ -92,7 +92,7 @@ static void format_time_short(char *buf, size_t len, time_t timestamp) {
   char tmp[12];
   strftime(tmp, sizeof(tmp), "%I:%M%p", t);
   if (tmp[0] == '0') {
-    memmove(tmp, tmp + 1, strlen(tmp));
+    tmp[0] = ' ';
   }
   snprintf(buf, len, "%s", tmp);
 }
@@ -183,18 +183,6 @@ static void draw_chart(GContext *ctx) {
     points[i] = GPoint(x, y);
   }
 
-  // Chart frame
-  graphics_context_set_stroke_color(ctx, GColorWhite);
-  graphics_context_set_stroke_width(ctx, 1);
-  graphics_draw_rect(ctx, GRect(chart_left, chart_top, chart_w, chart_h));
-
-  // Tide curve with thicker stroke for the future side.
-  graphics_context_set_stroke_width(ctx, 2);
-  for (int i = start; i < end - 1; i++) {
-    if (points[i].x < 0 || points[i + 1].x < 0) continue;
-    graphics_draw_line(ctx, points[i], points[i + 1]);
-  }
-
   // Dotted vertical "now" indicator (only if "now" is in the visible range).
   if (TIDE_NOW_INDEX >= start && TIDE_NOW_INDEX < end) {
     int slot = TIDE_NOW_INDEX - start;
@@ -204,6 +192,17 @@ static void draw_chart(GContext *ctx) {
       graphics_draw_pixel(ctx, GPoint(now_x, y));
       graphics_draw_pixel(ctx, GPoint(now_x, y + 1));
     }
+  }
+
+  // Tide curve. Past hours muted, future hours full white, so
+  // "what's coming" reads as the primary information — same
+  // pattern jy-time's tide_chart_draw_overlay uses.
+  graphics_context_set_stroke_width(ctx, 2);
+  for (int i = start; i < end - 1; i++) {
+    if (points[i].x < 0 || points[i + 1].x < 0) continue;
+    GColor stroke = (i < TIDE_NOW_INDEX) ? GColorLightGray : GColorWhite;
+    graphics_context_set_stroke_color(ctx, stroke);
+    graphics_draw_line(ctx, points[i], points[i + 1]);
   }
 
   // If the cursor has been scrolled away from "now", show a thin solid
@@ -226,7 +225,7 @@ static void draw_status_footer(GContext *ctx) {
   char level_buf[12];
 
   format_level(s_tide_hourly[TIDE_NOW_INDEX], now_buf, sizeof(now_buf));
-  snprintf(now_line, sizeof(now_line), "Now: %s", now_buf);
+  snprintf(now_line, sizeof(now_line), "Now %s", now_buf);
 
   format_time_short(time_buf, sizeof(time_buf), (time_t)s_next_high_t);
   format_level(s_next_high_l, level_buf, sizeof(level_buf));
