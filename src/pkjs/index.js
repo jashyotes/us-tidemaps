@@ -15,7 +15,8 @@ var TIDE_WINDOW_HOURS = 48;
 var DEFAULT_SETTINGS = {
   TIDE_STATION_ID: '',
   TIDE_UNITS: 'feet',
-  REFRESH_MINUTES: 60
+  REFRESH_MINUTES: 60,
+  THEME: 'dark'
 };
 
 var refreshIntervalId = null;
@@ -43,6 +44,10 @@ function tideStationId(settings) {
 
 function tideUnitsId(settings) {
   return settings.TIDE_UNITS === 'meters' ? 1 : 0;
+}
+
+function themeId(settings) {
+  return settings.THEME === 'light' ? 1 : 0;
 }
 
 function refreshMinutes(settings) {
@@ -305,6 +310,7 @@ function sendStationConfig() {
   var dict = {};
   dict[keys.TIDE_STATION_ID] = tideStationId(settings);
   dict[keys.TIDE_UNITS] = tideUnitsId(settings);
+  dict[keys.THEME] = themeId(settings);
   sendToWatch(dict, 'Tide config');
 }
 

@@ -56,6 +56,25 @@
     ]
   },
   {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Appearance"
+      },
+      {
+        "type": "select",
+        "messageKey": "THEME",
+        "label": "Theme",
+        "defaultValue": "dark",
+        "options": [
+          { "label": "Dark (white on black)", "value": "dark" },
+          { "label": "Light (black on white)", "value": "light" }
+        ]
+      }
+    ]
+  },
+  {
     "type": "submit",
     "defaultValue": "Save"
   }

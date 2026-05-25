@@ -27,6 +27,7 @@
 #define PERSIST_KEY_STATION_ID    7
 #define PERSIST_KEY_VIEW_HOURS    8
 #define PERSIST_KEY_CURSOR_OFFSET 9
+#define PERSIST_KEY_THEME_LIGHT   10
 
 #define MSG_KEY_HOURLY        MESSAGE_KEY_TIDE_HOURLY_LEVELS
 #define MSG_KEY_NEXT_HIGH_T   MESSAGE_KEY_TIDE_NEXT_HIGH_T
@@ -36,6 +37,7 @@
 #define MSG_KEY_STATION_NAME  MESSAGE_KEY_TIDE_STATION_NAME
 #define MSG_KEY_UNITS         MESSAGE_KEY_TIDE_UNITS
 #define MSG_KEY_STATION_ID    MESSAGE_KEY_TIDE_STATION_ID
+#define MSG_KEY_THEME         MESSAGE_KEY_THEME
 
 static Window  *s_window;
 static Layer   *s_root_layer;
@@ -51,6 +53,11 @@ static bool     s_units_meters     = false;
 
 static int      s_view_hours     = 24;   // 24 or 48
 static int      s_cursor_offset  = 0;    // -view/2 .. +view/2, ignored when no data
+static bool     s_theme_light    = false;
+
+static GColor theme_bg(void)  { return s_theme_light ? GColorWhite : GColorBlack; }
+static GColor theme_fg(void)  { return s_theme_light ? GColorBlack : GColorWhite; }
+static GColor theme_mute(void){ return s_theme_light ? GColorDarkGray : GColorLightGray; }
 
 static GFont    s_font_header;
 static GFont    s_font_body;
@@ -127,7 +134,7 @@ static void clamp_cursor(void) {
 
 static void draw_placeholder(GContext *ctx, const char *line1,
                              const char *line2) {
-  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_context_set_text_color(ctx, theme_fg());
   graphics_draw_text(ctx, line1, s_font_body,
                      GRect(8, 90, SCREEN_W - 16, 28),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
@@ -184,9 +191,11 @@ static void draw_chart(GContext *ctx) {
   }
 
   // Dotted vertical "now" indicator (only if "now" is in the visible range).
+  // Drawn before the curve so the data line dominates where they cross.
   if (TIDE_NOW_INDEX >= start && TIDE_NOW_INDEX < end) {
     int slot = TIDE_NOW_INDEX - start;
     int now_x = chart_left + (slot * chart_w) / span;
+    graphics_context_set_stroke_color(ctx, theme_fg());
     graphics_context_set_stroke_width(ctx, 1);
     for (int y = chart_top + 2; y < chart_bot - 2; y += 4) {
       graphics_draw_pixel(ctx, GPoint(now_x, y));
@@ -194,13 +203,12 @@ static void draw_chart(GContext *ctx) {
     }
   }
 
-  // Tide curve. Past hours muted, future hours full white, so
-  // "what's coming" reads as the primary information — same
-  // pattern jy-time's tide_chart_draw_overlay uses.
+  // Tide curve. Past hours muted, future hours full foreground, so
+  // "what's coming" reads as the primary information.
   graphics_context_set_stroke_width(ctx, 2);
   for (int i = start; i < end - 1; i++) {
     if (points[i].x < 0 || points[i + 1].x < 0) continue;
-    GColor stroke = (i < TIDE_NOW_INDEX) ? GColorLightGray : GColorWhite;
+    GColor stroke = (i < TIDE_NOW_INDEX) ? theme_mute() : theme_fg();
     graphics_context_set_stroke_color(ctx, stroke);
     graphics_draw_line(ctx, points[i], points[i + 1]);
   }
@@ -210,6 +218,7 @@ static void draw_chart(GContext *ctx) {
   // their cursor is pointing.
   if (s_cursor_offset != 0) {
     int cursor_x = chart_left + ((s_view_hours / 2) * chart_w) / span;
+    graphics_context_set_stroke_color(ctx, theme_fg());
     graphics_context_set_stroke_width(ctx, 1);
     graphics_draw_line(ctx, GPoint(cursor_x, chart_top - 2),
                        GPoint(cursor_x, chart_top - 6));
@@ -235,7 +244,7 @@ static void draw_status_footer(GContext *ctx) {
   format_level(s_next_low_l, level_buf, sizeof(level_buf));
   snprintf(low_line, sizeof(low_line), "Low  %s  %s", time_buf, level_buf);
 
-  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_context_set_text_color(ctx, theme_fg());
   graphics_draw_text(ctx, now_line, s_font_body,
                      GRect(8, 152, SCREEN_W - 16, 20),
                      GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
@@ -250,7 +259,7 @@ static void draw_status_footer(GContext *ctx) {
 static void update_proc(Layer *layer, GContext *ctx) {
   (void)layer;
 
-  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_context_set_fill_color(ctx, theme_bg());
   graphics_fill_rect(ctx, GRect(0, 0, SCREEN_W, SCREEN_H), 0, GCornerNone);
 
   // Header: station name on the left, view mode on the right.
@@ -260,7 +269,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   char mode_buf[8];
   snprintf(mode_buf, sizeof(mode_buf), "%dh", s_view_hours);
 
-  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_context_set_text_color(ctx, theme_fg());
   graphics_draw_text(ctx, station_label, s_font_header,
                      GRect(8, 2, SCREEN_W - 60, 22),
                      GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
@@ -343,6 +352,15 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
     persist_write_bool(PERSIST_KEY_UNITS_METERS, s_units_meters);
   }
 
+  t = dict_find(iter, MSG_KEY_THEME);
+  if (t) {
+    s_theme_light = ((int)t->value->int32) != 0;
+    persist_write_bool(PERSIST_KEY_THEME_LIGHT, s_theme_light);
+    if (s_window) {
+      window_set_background_color(s_window, theme_bg());
+    }
+  }
+
   if (s_root_layer) {
     layer_mark_dirty(s_root_layer);
   }
@@ -383,6 +401,9 @@ static void load_persisted(void) {
   }
   if (persist_exists(PERSIST_KEY_CURSOR_OFFSET)) {
     s_cursor_offset = persist_read_int(PERSIST_KEY_CURSOR_OFFSET);
+  }
+  if (persist_exists(PERSIST_KEY_THEME_LIGHT)) {
+    s_theme_light = persist_read_bool(PERSIST_KEY_THEME_LIGHT);
   }
   clamp_cursor();
 }
@@ -430,7 +451,7 @@ static void click_config_provider(void *context) {
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(root);
-  window_set_background_color(window, GColorBlack);
+  window_set_background_color(window, theme_bg());
 
   s_font_header = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   s_font_body   = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);

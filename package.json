@@ -1,7 +1,7 @@
 {
   "name": "us-tidemaps",
   "author": "Josh Yates",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "keywords": [
     "pebble-app",
     "tide",
@@ -34,7 +34,8 @@
       "TIDE_STATION_NAME",
       "TIDE_UNITS",
       "TIDE_STATION_ID",
-      "REFRESH_MINUTES"
+      "REFRESH_MINUTES",
+      "THEME"
     ],
     "resources": {
       "media": [
