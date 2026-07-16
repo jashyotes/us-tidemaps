@@ -11,8 +11,11 @@
 // SELECT toggles between 24h and 48h views.
 // BACK exits.
 
-#define SCREEN_W 200
-#define SCREEN_H 228
+// Display size comes from the SDK per-platform defines so one binary
+// layout source serves emery (200x228 rect), gabbro (260x260 round),
+// and chalk (180x180 round).
+#define SCREEN_W PBL_DISPLAY_WIDTH
+#define SCREEN_H PBL_DISPLAY_HEIGHT
 
 #define TIDE_WINDOW_HOURS 48
 #define TIDE_NOW_INDEX    24
@@ -135,6 +138,23 @@ static void clamp_cursor(void) {
 static void draw_placeholder(GContext *ctx, const char *line1,
                              const char *line2) {
   graphics_context_set_text_color(ctx, theme_fg());
+#if defined(PBL_ROUND)
+  const bool has_second_line = line2 && line2[0];
+  const int text_left = (SCREEN_W == 180) ? 24 : 28;
+  const int text_width = SCREEN_W - (text_left * 2);
+  const int first_y = (SCREEN_W == 180) ?
+      (has_second_line ? 66 : 78) : (has_second_line ? 105 : 118);
+  const int second_y = (SCREEN_W == 180) ? 89 : 134;
+  GFont font = (SCREEN_W == 180) ? s_font_small : s_font_body;
+  graphics_draw_text(ctx, line1, font,
+                     GRect(text_left, first_y, text_width, 28),
+                     GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+  if (has_second_line) {
+    graphics_draw_text(ctx, line2, font,
+                       GRect(text_left, second_y, text_width, 28),
+                       GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+  }
+#else
   graphics_draw_text(ctx, line1, s_font_body,
                      GRect(8, 90, SCREEN_W - 16, 28),
                      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
@@ -143,13 +163,21 @@ static void draw_placeholder(GContext *ctx, const char *line1,
                        GRect(8, 120, SCREEN_W - 16, 28),
                        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
   }
+#endif
 }
 
 static void draw_chart(GContext *ctx) {
+#if defined(PBL_ROUND)
+  const int chart_left  = (SCREEN_W == 180) ? 22 : 26;
+  const int chart_right = SCREEN_W - chart_left;
+  const int chart_top   = (SCREEN_W == 180) ? 52 : 64;
+  const int chart_bot   = (SCREEN_W == 180) ? 100 : 166;
+#else
   const int chart_left  = 8;
   const int chart_right = SCREEN_W - 8;
   const int chart_top   = 30;
   const int chart_bot   = 150;
+#endif
   const int chart_w     = chart_right - chart_left;
   const int chart_h     = chart_bot - chart_top;
 
@@ -245,6 +273,22 @@ static void draw_status_footer(GContext *ctx) {
   snprintf(low_line, sizeof(low_line), "Low  %s  %s", time_buf, level_buf);
 
   graphics_context_set_text_color(ctx, theme_fg());
+#if defined(PBL_ROUND)
+  const int text_left = (SCREEN_W == 180) ? 25 : 48;
+  const int text_width = SCREEN_W - (text_left * 2);
+  const int now_y = (SCREEN_W == 180) ? 101 : 169;
+  const int row_step = (SCREEN_W == 180) ? 16 : 21;
+  GFont font = (SCREEN_W == 180) ? s_font_small : s_font_body;
+  graphics_draw_text(ctx, now_line, font,
+                     GRect(text_left, now_y, text_width, 20),
+                     GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+  graphics_draw_text(ctx, high_line, font,
+                     GRect(text_left, now_y + row_step, text_width, 20),
+                     GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+  graphics_draw_text(ctx, low_line, font,
+                     GRect(text_left, now_y + (row_step * 2), text_width, 20),
+                     GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+#else
   graphics_draw_text(ctx, now_line, s_font_body,
                      GRect(8, 152, SCREEN_W - 16, 20),
                      GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
@@ -254,6 +298,7 @@ static void draw_status_footer(GContext *ctx) {
   graphics_draw_text(ctx, low_line, s_font_body,
                      GRect(8, 196, SCREEN_W - 16, 20),
                      GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
+#endif
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
@@ -270,12 +315,28 @@ static void update_proc(Layer *layer, GContext *ctx) {
   snprintf(mode_buf, sizeof(mode_buf), "%dh", s_view_hours);
 
   graphics_context_set_text_color(ctx, theme_fg());
+#if defined(PBL_ROUND)
+  const int header_left = (SCREEN_W == 180) ? 40 : 64;
+  const int station_y = (SCREEN_W == 180) ? 9 : 18;
+  const int mode_y = (SCREEN_W == 180) ? 26 : 37;
+  GFont header_font = (SCREEN_W == 180) ? s_font_small : s_font_header;
+  graphics_draw_text(ctx, station_label, header_font,
+                     GRect(header_left, station_y,
+                           SCREEN_W - (header_left * 2), 22),
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter, NULL);
+  graphics_draw_text(ctx, mode_buf, header_font,
+                     GRect(header_left, mode_y,
+                           SCREEN_W - (header_left * 2), 22),
+                     GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+#else
   graphics_draw_text(ctx, station_label, s_font_header,
                      GRect(8, 2, SCREEN_W - 60, 22),
                      GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
   graphics_draw_text(ctx, mode_buf, s_font_header,
                      GRect(SCREEN_W - 52, 2, 44, 22),
                      GTextOverflowModeWordWrap, GTextAlignmentRight, NULL);
+#endif
 
   if (s_station_id[0] == '\0') {
     draw_placeholder(ctx, "Set a tide station ID",
